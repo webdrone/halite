@@ -9,28 +9,6 @@ Requires python3 as well as the packages imported below.
 import random
 from collections import Counter
 
-
-class State:
-
-    def __init__(self):
-        self.player = card_draw('Black')
-        self.dealer = card_draw('Black')
-        self.turn = 0
-        self.terminal = False
-
-    def print_state(self):
-        state_str = ""
-        state_str += "Player score: " + str(self.player) + "\n"
-        state_str += "Dealer score: " + str(self.dealer) + "\n"
-        state_str += "Turn: " + str(self.turn) + "\n"
-        state_str += "Terminal state: " + str(self.terminal) + "\n"
-        return state_str
-
-    def get_s(self):
-        s = tuple((int(self.player), int(self.dealer)))
-        return s
-
-
 def bust(score):
     if 1 <= score <= 21:
         return False
@@ -117,7 +95,7 @@ class MonteCarlo:
                 poss_act = {(s.get_s(), a): self.value_action_function[s.get_s(), a]
                             for a in self.actions}
                 act = max(
-                    poss_act,  key=lambda k: (poss_act[k], random.random()))[1]
+                    poss_act, key=lambda k: (poss_act[k], random.random()))[1]
                 point = list(s.get_s())
                 point.append(self.value_action_function[(s.get_s(), act)])
 
@@ -127,9 +105,10 @@ class MonteCarlo:
 
 class SarsaLambda:
 
-    def __init__(self, step, actions, gamma=1, lambda_sarsa=0):
-        self.value_action_function = dict()
-        self.N_s_a = Counter()
+    def __init__(self, step, actions, gamma=1, lambda_sarsa=0, Q_sa={},
+                 N_s_a=None):
+        self.value_action_function = dict(Q_sa)
+        self.N_s_a = N_s_a or Counter()
         self.actions = actions  # action, "hit" or "stick"
         self.step = step
         self.gamma = gamma  # default gamma = 1
@@ -180,7 +159,7 @@ class SarsaLambda:
                     s_a] += delta * e_s_a[s_a] / self.N_s_a[s_a]
                 e_s_a[s_a] *= self.gamma * self.lambda_sarsa
 
-        return self.value_action_function
+        return self.value_action_function, self.N_s_a
 
     def choose_action(self, state, epsilon):
         # pick ε-greedy action
@@ -204,7 +183,7 @@ class SarsaLambda:
                 poss_act = {(s.get_s(), a): self.value_action_function[s.get_s(), a]
                             for a in self.actions}
                 act = max(
-                    poss_act,  key=lambda k: (poss_act[k], random.random()))[1]
+                    poss_act, key=lambda k: (poss_act[k], random.random()))[1]
                 point = list(s.get_s())
                 point.append(self.value_action_function[s.get_s(), act])
                 V.append(point)
@@ -326,7 +305,7 @@ class SarsaLambdaLFA:
                 poss_act = {(s.get_s(), a): self.value_action_function(s.get_s(), a)
                             for a in self.actions}
                 act = max(
-                    poss_act,  key=lambda k: (poss_act[k], random.random()))[1]
+                    poss_act, key=lambda k: (poss_act[k], random.random()))[1]
                 point = list(s.get_s())
                 point.append(self.value_action_function(s.get_s(), act))
                 V.append(point)
