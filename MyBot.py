@@ -89,7 +89,16 @@ e_s_a = Counter()
 delta = 0
 epsilon = N_0 / (N_0 + 0)
 state_action_list = []
-a = self.choose_action(s, epsilon)
+moves = []
+gameMap = getFrame()
+
+loc_states = get_states(gameMap, myID)
+for loc, s in loc_states.items():
+    a = self.choose_action(s, epsilon)
+    moves.append(Move(loc, a))
+    state_action_list.append((s, a))
+
+sendFrame(moves)
 
 try:
     while True:
@@ -98,14 +107,12 @@ try:
 
         loc_states = get_states(gameMap, myID)
         for loc, s in loc_states.items():
-            state_action_list.append((s, a))
-            # s, r = self.step(s, a)
-
             # if not s.terminal:
             N_s = sum([self.N_s_a[(s, act)]
                        for act in self.actions])
             epsilon = N_0 / (N_0 + N_s)
             a = self.choose_action(s, epsilon)
+            moves.append(Move(loc, a))
 
             delta = r + self.gamma * self.value_action_function[(s, a)]\
                 - self.value_action_function[state_action_list[-1]]
@@ -118,7 +125,7 @@ try:
                 self.value_action_function[
                     s_a] += delta * e_s_a[s_a] / self.N_s_a[s_a]
                 e_s_a[s_a] *= self.gamma * self.lambda_sarsa
-
+            state_action_list.append((s, a))
         sendFrame(moves)
 finally:
     # if s.terminal:
