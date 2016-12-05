@@ -229,8 +229,8 @@ try:
                 (0 if S_lambda.value_action_function.get((s, a)) is None
                     else S_lambda.value_action_function[(s, a)]) \
                 - \
-                (0 if s_a_list is None or
-                    S_lambda.value_action_function.get(s_a_list[-1]) is None
+                (0 if (s_a_list is None or
+                    S_lambda.value_action_function.get(s_a_list[-1]) is None)
                     else S_lambda.value_action_function[s_a_list[-1]])
 
             # this happens whether or not s.terminal==True
@@ -253,9 +253,9 @@ try:
 
         # pickling for persisting Q_sa over many episodes
         with open('Sarsa_Q_sa_l' + str(l) + '.pickle', 'wb') as fout:
-            pickle.dump(Sarsa_Q_sa, fout)
+            pickle.dump(S_lambda.value_action_function, fout)
         with open('N_s_a_l' + str(l) + '.pickle', 'wb') as fout:
-            pickle.dump(N_s_a, fout)
+            pickle.dump(S_lambda.N_s_a, fout)
 
         S_lambda.step(moves)
 finally:
@@ -277,9 +277,9 @@ finally:
 
     # pickling for persisting Q_sa over many episodes
     with open('Sarsa_Q_sa_l' + str(l) + '.pickle', 'wb') as fout:
-        pickle.dump(Sarsa_Q_sa, fout)
+        pickle.dump(S_lambda.value_action_function, fout)
     with open('N_s_a_l' + str(l) + '.pickle', 'wb') as fout:
-        pickle.dump(N_s_a, fout)
+        pickle.dump(S_lambda.N_s_a, fout)
 
 # get_state function should depend on the value-function used (maybe imported?)
 # Example for state = site.strength:
