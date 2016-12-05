@@ -3,4 +3,5 @@ __pycache__
 *.gz
 *.npy
 *.hlt
+*.log
 halite
