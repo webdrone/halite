@@ -113,6 +113,7 @@ class SarsaLambda:
         self.step = step
         self.gamma = gamma  # default gamma = 1
         self.lambda_sarsa = lambda_sarsa  # default gamma = 0
+        """
         s = State()
         for player_val in range(1, 22):
             for dealer_val in range(1, 11):
@@ -120,6 +121,7 @@ class SarsaLambda:
                 s.dealer = dealer_val
                 for act in self.actions:
                     self.value_action_function[(s.get_s(), act)] = 0
+        """
 
     def run(self, N=100):
         for i in range(N):
@@ -166,7 +168,7 @@ class SarsaLambda:
         if random.random() < epsilon:
             act = random.choice(self.actions)
         else:
-            s = state.get_s()
+            s = state  # .get_s()
             poss_act = {(s, a): self.value_action_function[(s, a)]
                         for a in self.actions}
             act = max(
