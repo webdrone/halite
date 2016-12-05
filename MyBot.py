@@ -25,13 +25,13 @@ def get_states(gameMap, myID):
                 for j in range(-k, k + 1):
                     for i in range(-k, k + 1):
                         if x + i < 0:
-                            xi = gameMap.width - (x + i)
+                            xi = gameMap.width + (x + i)
                         elif x + i > gameMap.width:
                             xi = x + i - gameMap.width
                         else:
                             xi = x + i
                         if y + j < 0:
-                            yj = gameMap.height - (y + j)
+                            yj = gameMap.height + (y + j)
                         elif y + j > gameMap.height:
                             yj = y + j - gameMap.height
                         else:
