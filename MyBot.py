@@ -13,6 +13,7 @@ k = 1  # the number of neighbours considered
 #     with redirect_stdout(file_debug):
 #         print('hello')
 
+
 def get_states(gameMap, myID):
     locations_states = {}
     for y in range(gameMap.height):
@@ -23,7 +24,19 @@ def get_states(gameMap, myID):
                 surround = []
                 for j in range(-1 * k, 1 * k + 1):
                     for i in range(-1 * k, 1 * k + 1):
-                        surround += [Location(x + i, y + j)]
+                        if x + i < 0:
+                            xi = gameMap.width - (x + i)
+                        elif x + i > gameMap.width:
+                            xi = x + i - gameMap.width
+                        else:
+                            xi = x + i
+                        if y + j < 0:
+                            yj = gameMap.height - (y + j)
+                        elif y + j > gameMap.height:
+                            yj = y + j - gameMap.height
+                        else:
+                            yj = y + j
+                        surround += [Location(xi, yj)]
                 # boundary = ()
                 # print(surround)
                 surround_state = []
@@ -71,8 +84,8 @@ def symmetry(state=None):
                         # transpose (i, j) -> (j, i)
                         s1 += [s[(k + i) * (2 * k + 1) + (j + k)]]
                     elif refl == 1:
-                        # transpose opp (i, j) -> (-i, -j)
-                        s1 += [s[(k - j) * (2 * k + 1) + (-i + k)]]
+                        # transpose opp (i, j) -> (-j, -i)
+                        s1 += [s[(k - i) * (2 * k + 1) + (-j + k)]]
                     elif refl == 2:
                         # reflect on vert (i, j) -> (-i, j)
                         s1 += [s[(k + j) * (2 * k + 1) + (-i + k)]]
@@ -143,6 +156,7 @@ try:
     with open('N_s_a_l' + str(l) + '.pickle', 'rb') as fout:
         N_s_a = pickle.load(fout)
 except IOError:
+    # print("Couldn't load.")
     Sarsa_Q_sa = {}
     N_s_a = None
 
@@ -166,14 +180,16 @@ loc_states = get_states(gameMap, myID)
 for loc, s in loc_states.items():
     s, rotn, refl = symmetry(s)
     r = sum(ss.strength for ss in s if ss.owner == myID)
-    a = S_lambda.choose_action(s, epsilon)
+    a = 0  # S_lambda.choose_action(s, epsilon)
     N_s = sum(S_lambda.N_s_a[(s, act)] for act in S_lambda.actions)
     epsilon = N_0 / (N_0 + N_s)
     a_move = action_symmetry(a, rotn=rotn, refl=refl)
     moves.append(Move(loc, a_move))
     state_action_list.append((s, a))
-    s_a_track[gameMap.getLocation(loc, a_move)] = (s_a_track.get(
-        loc) or []) + [len(state_action_list) - 1]
+    s_a_track[(gameMap.getLocation(loc, a_move).x,
+               gameMap.getLocation(loc, a_move).y)] = (s_a_track.get(
+                   (loc.x, loc.y)) or []) + [len(state_action_list) - 1]
+    #print(s_a_track, a)
 sendFrame(moves)
 
 try:
@@ -205,15 +221,16 @@ try:
             moves.append(Move(loc, a_move))
 
             # previous s_a in state_action_list
-            track_idx = s_a_track.get(loc)
-            s_a_list = None if track_idx is None else state_action_list[
-                track_idx]
+            track_idx = s_a_track.get((loc.x, loc.y))
+            s_a_list = None if track_idx is None else [
+                state_action_list[t] for t in track_idx]
 
             delta = r + S_lambda.gamma * \
                 (0 if S_lambda.value_action_function.get((s, a)) is None
                     else S_lambda.value_action_function[(s, a)]) \
                 - \
-                (0 if s_a_list is None
+                (0 if s_a_list is None or
+                    S_lambda.value_action_function.get(s_a_list[-1]) is None
                     else S_lambda.value_action_function[s_a_list[-1]])
 
             # this happens whether or not s.terminal==True
@@ -228,10 +245,11 @@ try:
                         s_a] += delta * e_s_a[s_a] / S_lambda.N_s_a[s_a]
                     e_s_a[s_a] *= S_lambda.gamma * S_lambda.lambda_sarsa
                 state_action_list.append((s, a))
-                s_a_track[gameMap.getLocation(loc, a_move)] = (s_a_track.get(
-                    loc) or []) + \
+                s_a_track[(gameMap.getLocation(loc, a_move).x,
+                           gameMap.getLocation(loc, a_move).y)] = (s_a_track.get(
+                               (loc.x, loc.y)) or []) + \
                     [len(state_action_list) - 1]
-                del s_a_track[loc]
+                del s_a_track[(loc.x, loc.y)]
 
         # pickling for persisting Q_sa over many episodes
         with open('Sarsa_Q_sa_l' + str(l) + '.pickle', 'wb') as fout:
