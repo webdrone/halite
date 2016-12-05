@@ -22,8 +22,8 @@ def get_states(gameMap, myID):
             location = Location(x, y)
             if gameMap.getSite(location).owner == myID:
                 surround = []
-                for j in range(-1 * k, 1 * k + 1):
-                    for i in range(-1 * k, 1 * k + 1):
+                for j in range(-k, k + 1):
+                    for i in range(-k, k + 1):
                         if x + i < 0:
                             xi = gameMap.width - (x + i)
                         elif x + i > gameMap.width:
@@ -71,7 +71,7 @@ def symmetry(state=None):
     # check for rotation (3 rotations + 1 gets to the original)
     for rotn in range(4):
         # if s in state-action dictionary, do not attempt symmetry
-        if s in [ke[0] for ke in S_lambda.value_action_function]:
+        if s in [key[0] for key in S_lambda.value_action_function]:
             return s, rotn, None
 
         # if not, try to find symmetry
@@ -93,12 +93,12 @@ def symmetry(state=None):
                         # reflect on hor (i, j) -> (i, -j)
                         s1 += [s[(k - j) * (2 * k + 1) + (i + k)]]
             # if s in state-action dictionary, do not attempt symmetry
-            if tuple(s1) in [ke[0] for ke in S_lambda.value_action_function]:
+            if tuple(s1) in [key[0] for key in S_lambda.value_action_function]:
                 return tuple(s1), rotn, refl
         # rotate
         s1 = []
-        for j in range(-1 * k, 1 * k + 1):
-            for i in range(-1 * k, 1 * k + 1):
+        for j in range(-k, k + 1):
+            for i in range(-k, k + 1):
                 s1 += [s[(k - i) * (2 * k + 1) + (j + k)]]
         s = tuple(s1)
     return s, 0, None
@@ -109,6 +109,7 @@ def action_symmetry(a, rotn, refl=None):
     # rotn
     if a == 0:
         a_add = a
+        return a_add
     elif a - rotn > 0:
         a_add = a - rotn
     else:
@@ -167,7 +168,7 @@ S_lambda = SarsaLambda(step, actions=DIRECTIONS, lambda_sarsa=l,
 
 # Initialising variables for run_episode (SarsaLambda)
 r = 0  # reward
-N_0 = 100
+N_0 = 10000
 e_s_a = Counter()
 delta = 0
 epsilon = N_0 / (N_0 + 0)
