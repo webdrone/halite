@@ -67,6 +67,7 @@ def step(moves=None):
 
 def symmetry(state=None):
     s = tuple(state)
+    return s, 0, None
 
     # check for rotation (3 rotations + 1 gets to the original)
     for rotn in range(4):
@@ -105,15 +106,8 @@ def symmetry(state=None):
 
 
 def action_symmetry(a, rotn, refl=None):
-    # matching chosen action to rotation, reflection
-    # rotn
-    if a == 0:
-        a_add = a
-        return a_add
-    elif a - rotn > 0:
-        a_add = a - rotn
-    else:
-        a_add = a - rotn + len(DIRECTIONS) - 1
+    return a
+    a_add = a
 
     # refl
     if refl is None:
@@ -146,6 +140,15 @@ def action_symmetry(a, rotn, refl=None):
             a_add = SOUTH
         elif a_add == SOUTH:
             a_add = NORTH
+
+    # matching chosen action to rotation, reflection
+    # rotn
+    if a_add == STILL:
+        return a_add
+    elif a_add - rotn > 0:
+        a_add = a_add - rotn
+    else:
+        a_add = a_add - rotn + len(DIRECTIONS) - 1
     return a_add
 
 
@@ -204,7 +207,9 @@ try:
             s, rotn, refl = symmetry(s)
 
             # reward = territory
-            r = sum(ss.strength for ss in s if ss.owner == myID)
+            # ss.owner = 1 if owner = myID (in get_states)
+            # r = sum(ss.strength for ss in s if ss.owner == 1) \
+            r = sum(ss.production for ss in s if ss.owner == 1)
 
             # if not s.terminal:
             # choose action
@@ -249,8 +254,29 @@ try:
                 s_a_track[(gameMap.getLocation(loc, a_move).x,
                            gameMap.getLocation(loc, a_move).y)] = (s_a_track.get(
                                (loc.x, loc.y)) or []) + \
-                    [len(state_action_list) - 1]
+                           [len(state_action_list) - 1]
                 del s_a_track[(loc.x, loc.y)]
+
+        # Checking for killed bots and punishing
+        loc_states_dict = {(loc.x, loc.y) for loc in loc_states}
+        del_loc = []
+        for loc in s_a_track:
+            if loc not in loc_states_dict:
+                r = -1 * gameMap.getSite(Location(*loc)).strength
+                track_idx = s_a_track[loc]
+                s_a_list = [state_action_list[t] for t in track_idx]
+                e_s_a[s_a_list[-1]] += 1
+                S_lambda.N_s_a[s_a_list[-1]] += 1
+
+                for s_a in s_a_list:
+                    S_lambda.value_action_function[
+                        s_a] = S_lambda.value_action_function.get(s_a) or 0
+                    S_lambda.value_action_function[
+                        s_a] += delta * e_s_a[s_a] / S_lambda.N_s_a[s_a]
+                    e_s_a[s_a] *= S_lambda.gamma * S_lambda.lambda_sarsa
+                del_loc += [loc]
+        for loc in del_loc:
+            del s_a_track[loc]
 
         # pickling for persisting Q_sa over many episodes
         with open('Sarsa_Q_sa_l' + str(l) + '.pickle', 'wb') as fout:
