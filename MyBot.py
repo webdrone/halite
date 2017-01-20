@@ -16,41 +16,54 @@ k = 1  # the number of neighbours considered
 
 def get_states(gameMap, myID):
     locations_states = {}
+    prod_me = 0
+    prod_tot = 0
     for y in range(gameMap.height):
         for x in range(gameMap.width):
             # print(x, y)
             location = Location(x, y)
+            prod_tot += gameMap.getSite(location).production
             if gameMap.getSite(location).owner == myID:
-                surround = []
-                for j in range(-k, k + 1):
-                    for i in range(-k, k + 1):
-                        if x + i < 0:
-                            xi = gameMap.width + (x + i)
-                        elif x + i > gameMap.width:
-                            xi = x + i - gameMap.width
-                        else:
-                            xi = x + i
-                        if y + j < 0:
-                            yj = gameMap.height + (y + j)
-                        elif y + j > gameMap.height:
-                            yj = y + j - gameMap.height
-                        else:
-                            yj = y + j
-                        surround += [Location(xi, yj)]
-                # boundary = ()
-                # print(surround)
-                surround_state = []
-                for loc in surround:
-                    ss = gameMap.getSite(loc)
-                    if ss.owner == myID:
-                        ss.owner = 1
-                    elif ss.owner != 0:
-                        ss.owner = -1
-                    surround_state += [ss]
+                prod_me += gameMap.getSite(location).production
+                locations_states[location] = 0
 
-                state = tuple(surround_state)
-                # print(location.x, location.y)
-                locations_states[location] = state
+    prod_frac = prod_me / prod_tot
+
+    for location in locations_states:
+        x = location.x
+        y = location.y
+        surround = []
+        for j in range(-k, k + 1):
+            for i in range(-k, k + 1):
+                if x + i < 0:
+                    xi = gameMap.width + (x + i)
+                elif x + i > gameMap.width:
+                    xi = x + i - gameMap.width
+                else:
+                    xi = x + i
+                if y + j < 0:
+                    yj = gameMap.height + (y + j)
+                elif y + j > gameMap.height:
+                    yj = y + j - gameMap.height
+                else:
+                    yj = y + j
+                surround += [Location(xi, yj)]
+        # boundary = ()
+        # print(surround)
+        surround_state = []
+        for loc in surround:
+            ss = gameMap.getSite(loc)
+            if ss.owner == myID:
+                ss.owner = 1
+            elif ss.owner != 0:
+                ss.owner = -1
+            surround_state += [ss]
+
+        state = tuple([tuple(surround_state), prod_frac])
+        # print(state[0].strength, state[0].production,
+        #       state[1].strength, state[1].production)
+        # print(location.x, location.y)
+        locations_states[location] = state
     return locations_states
 
 
@@ -67,11 +80,12 @@ def step(moves=None):
 
 def symmetry(state=None):
     s = tuple(state)
-    return s, 0, None
+    # return s, 0, None
 
     # check for rotation (3 rotations + 1 gets to the original)
     for rotn in range(4):
         # if s in state-action dictionary, do not attempt symmetry
+        # print([key[0] for key in S_lambda.value_action_function])
         if s in [key[0] for key in S_lambda.value_action_function]:
             return s, rotn, None
 
@@ -83,25 +97,26 @@ def symmetry(state=None):
                 for i in range(-k, k + 1):
                     if refl == 0:
                         # transpose (i, j) -> (j, i)
-                        s1 += [s[(k + i) * (2 * k + 1) + (j + k)]]
+                        s1 += [s[0][(k + i) * (2 * k + 1) + (j + k)]]
                     elif refl == 1:
                         # transpose opp (i, j) -> (-j, -i)
-                        s1 += [s[(k - i) * (2 * k + 1) + (-j + k)]]
+                        s1 += [s[0][(k - i) * (2 * k + 1) + (-j + k)]]
                     elif refl == 2:
                         # reflect on vert (i, j) -> (-i, j)
-                        s1 += [s[(k + j) * (2 * k + 1) + (-i + k)]]
+                        s1 += [s[0][(k + j) * (2 * k + 1) + (-i + k)]]
                     elif refl == 3:
                         # reflect on hor (i, j) -> (i, -j)
-                        s1 += [s[(k - j) * (2 * k + 1) + (i + k)]]
+                        s1 += [s[0][(k - j) * (2 * k + 1) + (i + k)]]
             # if s in state-action dictionary, do not attempt symmetry
+            s1 = (tuple(s1), s[-1])
             if tuple(s1) in [key[0] for key in S_lambda.value_action_function]:
                 return tuple(s1), rotn, refl
         # rotate
         s1 = []
         for j in range(-k, k + 1):
             for i in range(-k, k + 1):
-                s1 += [s[(k - i) * (2 * k + 1) + (j + k)]]
-        s = tuple(s1)
+                s1 += [s[0][(k - i) * (2 * k + 1) + (j + k)]]
+        s = (tuple(s1), s[-1])
     return s, 0, None
 
 
@@ -183,7 +198,8 @@ s_a_track = {}
 loc_states = get_states(gameMap, myID)
 for loc, s in loc_states.items():
     s, rotn, refl = symmetry(s)
-    r = sum(ss.strength for ss in s if ss.owner == myID)
+    # r = sum(ss.strength for ss in s if ss.owner == myID)
+    r = s[-1]
     a = 0  # S_lambda.choose_action(s, epsilon)
     N_s = sum(S_lambda.N_s_a[(s, act)] for act in S_lambda.actions)
     epsilon = N_0 / (N_0 + N_s)
@@ -209,7 +225,8 @@ try:
             # reward = territory
             # ss.owner = 1 if owner = myID (in get_states)
             # r = sum(ss.strength for ss in s if ss.owner == 1) \
-            r = sum(ss.production for ss in s if ss.owner == 1)
+            # r = sum(ss.production for ss in s if ss.owner == 1)  # + \
+            r = s[-1]
 
             # if not s.terminal:
             # choose action
@@ -236,7 +253,7 @@ try:
                     else S_lambda.value_action_function[(s, a)]) \
                 - \
                 (0 if (s_a_list is None or
-                    S_lambda.value_action_function.get(s_a_list[-1]) is None)
+                       S_lambda.value_action_function.get(s_a_list[-1]) is None)
                     else S_lambda.value_action_function[s_a_list[-1]])
 
             # this happens whether or not s.terminal==True
@@ -254,7 +271,7 @@ try:
                 s_a_track[(gameMap.getLocation(loc, a_move).x,
                            gameMap.getLocation(loc, a_move).y)] = (s_a_track.get(
                                (loc.x, loc.y)) or []) + \
-                           [len(state_action_list) - 1]
+                    [len(state_action_list) - 1]
                 del s_a_track[(loc.x, loc.y)]
 
         # Checking for killed bots and punishing
