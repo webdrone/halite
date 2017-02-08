@@ -106,7 +106,7 @@ def get_my_production_at(gameMap, myID, locations):
             if ss.owner == myID:
                 prod_me += ss.production
 
-        prod[location] = prod_me
+        prod[(location.x, location.y)] = prod_me
     return prod
 
 
@@ -136,7 +136,7 @@ def revert_direction(dir=STILL):
 
 def symmetry(state=None):
     s = tuple(state)
-    # return s, 0, None
+    return s, 0, None
 
     # check for rotation (3 rotations + 1 gets to the original)
     for rotn in range(4):
@@ -176,7 +176,7 @@ def symmetry(state=None):
 
 
 def action_symmetry(a, rotn, refl=None):
-    # return a
+    return a
     a_add = a
 
     # refl
@@ -247,9 +247,11 @@ delta = 0
 epsilon = N_0 / (N_0 + 0)
 state_action_list = []
 moves = []
-gameMap = getFrame()
 s_a_track = {}
+prod = {}
 
+"""
+gameMap = getFrame()
 loc_states, prod = get_states(gameMap, myID)
 for loc, s in loc_states.items():
     s, rotn, refl = symmetry(s)
@@ -266,38 +268,54 @@ for loc, s in loc_states.items():
                    (loc.x, loc.y)) or []) + [len(state_action_list) - 1]
     #print(s_a_track, a)
 sendFrame(moves)
-
+"""
 try:
     while True:
-        moves = []
         gameMap = getFrame()
         # loc_states_prev = dict(loc_states)
         prod_prev = dict(prod)
+        moves_prev = list(moves)
         loc_states, prod = get_states(gameMap, myID)
         # prod_new = get_my_production_at(loc_states.keys())
+        moves = []
+
+        del_loc = [loc for loc in s_a_track
+                   if loc not in [(l.x, l.y) for l in loc_states]]
+        for loc in del_loc:
+            del s_a_track[loc]
 
         for loc, s in loc_states.items():
             # checking for rotational/reflective symmetry
             s_or = tuple(s)
-            s, rotn, refl = symmetry(s)
-            if (rotn != 0) or (refl is not None):
-                print("original state", s_or)
-                print(s, rotn, refl)
+            #s, rotn, refl = symmetry(s)
+
+            # if (rotn != 0) or (refl is not None):
+            #     print("original state", s_or)
+            #     print(s, rotn, refl)
 
             # reward = territory
             # ss.owner = 1 if owner = myID (in get_states)
             # r = sum(ss.strength for ss in s if ss.owner == 1) \
             # r = sum(ss.production for ss in s if ss.owner == 1)  # + \
             if s_a_track.get((loc.x, loc.y)) is None:
-                r = prod[(loc.x, loc.y)] - prod_prev[(loc.x, loc.y)]
+                r = 0  # -prod[(loc.x, loc.y)]  # - prod_prev[(loc.x, loc.y)]
             else:
-                rev_a = state_action_list[s_a_track[(loc.x, loc.y)][-1]][-1]
-                # print("action", rev_a, state_action_list, prod_prev)
-                rev_a = revert_direction(rev_a)
-                # print("rev_action", rev_a)
-                l = gameMap.getLocation(loc, rev_a)
+                # rev_a = state_action_list[s_a_track[(loc.x, loc.y)][-1]][-1]
+                loc_old = next((obj.loc for obj in moves_prev
+                                if (gameMap.getLocation(obj.loc, obj.direction).x,
+                                    gameMap.getLocation(obj.loc, obj.direction).y)
+                                == (loc.x, loc.y)), 0)
+                if loc_old == 0:
+                    print('loc_new:', loc.x, loc.y)
+                    print([(obj.loc.x, obj.loc.y, obj.direction)
+                           for obj in moves_prev])
+                    print(track_temp)
+                    print(s_a_track)
+                    print(s_a_track[(loc.x, loc.y)][-1], [state_action_list])
+
                 r = get_my_production_at(
-                    gameMap, myID, [l])[l] - prod_prev[(l.x, l.y)]
+                    gameMap, myID, [loc_old])[(loc_old.x, loc_old.y)] \
+                    - prod_prev[(loc_old.x, loc_old.y)]
 
             # if prod_new == 0:
             #     r = 0
@@ -311,7 +329,7 @@ try:
             epsilon = N_0 / (N_0 + N_s)
             a = S_lambda.choose_action(s, epsilon)
             # reverting action symmetry
-            a_move = action_symmetry(a, rotn=rotn, refl=refl)
+            a_move = a  # action_symmetry(a, rotn=rotn, refl=refl)
 
             moves += [Move(loc, a_move)]
 
@@ -320,16 +338,16 @@ try:
             s_a_list = None if track_idx is None else [
                 state_action_list[t] for t in track_idx]
 
-            delta = r + S_lambda.gamma * \
-                (0 if S_lambda.value_action_function.get((s, a)) is None
-                    else S_lambda.value_action_function[(s, a)]) \
-                - \
-                (0 if (s_a_list is None or
-                       S_lambda.value_action_function.get(s_a_list[-1]) is None)
-                    else S_lambda.value_action_function[s_a_list[-1]])
-
             # this happens whether or not s.terminal==True
             if s_a_list is not None:
+                delta = r + S_lambda.gamma * \
+                    (0 if S_lambda.value_action_function.get((s, a)) is None
+                     else S_lambda.value_action_function[(s, a)]) \
+                    - \
+                    (0 if (s_a_list is None or
+                           S_lambda.value_action_function.get(s_a_list[-1]) is None)
+                     else S_lambda.value_action_function[s_a_list[-1]])
+
                 e_s_a[s_a_list[-1]] += 1
                 S_lambda.N_s_a[s_a_list[-1]] += 1
 
@@ -339,34 +357,36 @@ try:
                     S_lambda.value_action_function[
                         s_a] += delta * e_s_a[s_a] / S_lambda.N_s_a[s_a]
                     e_s_a[s_a] *= S_lambda.gamma * S_lambda.lambda_sarsa
-                state_action_list += [(s, a)]
-                s_a_track[(gameMap.getLocation(loc, a_move).x,
-                           gameMap.getLocation(loc, a_move).y)] = (s_a_track.get(
-                               (loc.x, loc.y)) or []) + \
-                    [len(state_action_list) - 1]
-                if a_move != STILL:
-                    del s_a_track[(loc.x, loc.y)]
+
+            state_action_list += [(s, a)]
+            # if s_a_track.get((loc.x, loc.y)) is not None:
+            s_a_track[(loc.x, loc.y)] = (s_a_track.get((loc.x, loc.y)) or []) \
+                + [len(state_action_list) - 1]
+            track_temp = list(s_a_track.get((loc.x, loc.y)) or [])
+            del s_a_track[(loc.x, loc.y)]
+            s_a_track[(gameMap.getLocation(loc, a_move).x,
+                       gameMap.getLocation(loc, a_move).y)] = track_temp
 
         # Checking for killed bots and punishing
-        loc_states_dict = [(loc.x, loc.y) for loc in loc_states]
-        del_loc = []
-        for loc in s_a_track:
-            if loc not in loc_states_dict:
-                # r = -1 * gameMap.getSite(Location(*loc)).strength
-                # track_idx = s_a_track[loc]
-                # s_a_list = [state_action_list[t] for t in track_idx]
-                # e_s_a[s_a_list[-1]] += 1
-                # S_lambda.N_s_a[s_a_list[-1]] += 1
+        # loc_states_dict = [(loc.x, loc.y) for loc in loc_states]
+        # del_loc = []
+        # for loc in s_a_track:
+        #     if loc not in loc_states_dict:
+        #         # r = -1 * gameMap.getSite(Location(*loc)).strength
+        #         # track_idx = s_a_track[loc]
+        #         # s_a_list = [state_action_list[t] for t in track_idx]
+        #         # e_s_a[s_a_list[-1]] += 1
+        #         # S_lambda.N_s_a[s_a_list[-1]] += 1
 
-                # for s_a in s_a_list:
-                #     S_lambda.value_action_function[
-                #         s_a] = S_lambda.value_action_function.get(s_a) or 0
-                #     S_lambda.value_action_function[
-                #         s_a] += delta * e_s_a[s_a] / S_lambda.N_s_a[s_a]
-                #     e_s_a[s_a] *= S_lambda.gamma * S_lambda.lambda_sarsa
-                del_loc += [loc]
-        for loc in del_loc:
-            del s_a_track[loc]
+        #         # for s_a in s_a_list:
+        #         #     S_lambda.value_action_function[
+        #         #         s_a] = S_lambda.value_action_function.get(s_a) or 0
+        #         #     S_lambda.value_action_function[
+        #         #         s_a] += delta * e_s_a[s_a] / S_lambda.N_s_a[s_a]
+        #         #     e_s_a[s_a] *= S_lambda.gamma * S_lambda.lambda_sarsa
+        #         del_loc += [loc]
+        # for loc in del_loc:
+        #     del s_a_track[loc]
 
         # pickling for persisting Q_sa over many episodes
         with open('Sarsa_Q_sa_l' + str(lam) + '.pickle', 'wb') as fout:

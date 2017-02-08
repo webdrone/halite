@@ -169,7 +169,7 @@ class SarsaLambda:
             act = random.choice(self.actions)
         else:
             s = state  # .get_s()
-            poss_act = {(s, a): self.value_action_function[(s, a)]
+            poss_act = {(s, a): self.value_action_function.get((s, a)) or 0
                         for a in self.actions}
             act = max(
                 poss_act, key=lambda k: (poss_act[k], random.random()))[1]
