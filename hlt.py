@@ -14,22 +14,28 @@ CARDINALS = [a for a in range(1, 5)]
 ATTACK = 0
 STOP_ATTACK = 1
 
+
 class Location:
     def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
+
+
 class Site:
     def __init__(self, owner=0, strength=0, production=0):
         self.owner = owner
         self.strength = strength
         self.production = production
+
+
 class Move:
     def __init__(self, loc=0, direction=0):
         self.loc = loc
         self.direction = direction
 
+
 class GameMap:
-    def __init__(self, width = 0, height = 0, numberOfPlayers = 0):
+    def __init__(self, width=0, height=0, numberOfPlayers=0):
         self.width = width
         self.height = height
         self.contents = []
@@ -91,6 +97,7 @@ class GameMap:
                 else:
                     l.x -= 1
         return l
-    def getSite(self, l, direction = STILL):
+
+    def getSite(self, l, direction=STILL):
         l = self.getLocation(l, direction)
         return self.contents[l.y][l.x]
