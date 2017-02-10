@@ -249,6 +249,8 @@ state_action_list = []
 moves = []
 s_a_track = {}
 prod = {}
+dump_iter = 0
+dump_iter_max = 10 * (gameMap.width * gameMap.height) ** 0.5 - 2
 
 """
 gameMap = getFrame()
@@ -291,11 +293,11 @@ try:
         for loc, s in loc_states.items():
             # checking for rotational/reflective symmetry
             s_or = tuple(s)
-            s, rotn, refl = symmetry(s)
+            # s, rotn, refl = symmetry(s)
 
-            if (rotn != 0) or (refl is not None):
-                print("original state", s_or)
-                print(s, rotn, refl)
+            # if (rotn != 0) or (refl is not None):
+            #     print("original state", s_or)
+            #     print(s, rotn, refl)
 
             # reward = territory
             # ss.owner = 1 if owner = myID (in get_states)
@@ -336,7 +338,7 @@ try:
             epsilon = N_0 / (N_0 + N_s)
             a = S_lambda.choose_action(s, epsilon)
             # reverting action symmetry
-            a_move = action_symmetry(a, rotn=rotn, refl=refl)
+            a_move = a  # action_symmetry(a, rotn=rotn, refl=refl)
 
             moves += [Move(loc, a_move)]
 
@@ -399,10 +401,13 @@ try:
         #     del s_a_track[loc]
 
         # pickling for persisting Q_sa over many episodes
-        with open('Sarsa_Q_sa_l' + str(lam) + '.pickle', 'wb') as fout:
-            pickle.dump(S_lambda.value_action_function, fout)
-        with open('N_s_a_l' + str(lam) + '.pickle', 'wb') as fout:
-            pickle.dump(S_lambda.N_s_a, fout)
+        dump_iter += 1
+        if dump_iter == dump_iter_max:
+            with open('Sarsa_Q_sa_l' + str(lam) + '.pickle', 'wb') as fout:
+                pickle.dump(S_lambda.value_action_function, fout)
+            with open('N_s_a_l' + str(lam) + '.pickle', 'wb') as fout:
+                pickle.dump(S_lambda.N_s_a, fout)
+            dump_iter = 0
 
         S_lambda.step(moves)
 finally:
